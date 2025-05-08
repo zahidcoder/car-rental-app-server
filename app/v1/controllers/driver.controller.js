@@ -215,22 +215,19 @@ const driverBookCarToDelivery = async (req, res, next) => {
           });
       }
 
-      // Update the driverDeliveryStatuse and potentially bookingStatus
+      // Update only the driver side to "delivered" when arrivedToUser
       const updateData = {
           driverDeliveryStatuse: bookStatus,
       };
 
-      // If the status is "arrivedToUser", also update the bookingStatus to "delivered"
       if (bookStatus === "arrivedToUser") {
-          updateData.BookingStatus = "delivered";
-          updateData.status = "delivered";
           updateData.driverStatus = "delivered";
       }
 
       const updatedBooking = await BookCar.findByIdAndUpdate(
           BookId,
           updateData,
-          { new: true } // Return the updated document
+          { new: true }
       );
 
       if (!updatedBooking) {
