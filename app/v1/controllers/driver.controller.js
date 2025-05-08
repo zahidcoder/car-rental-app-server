@@ -222,9 +222,9 @@ const driverBookCarToDelivery = async (req, res, next) => {
 
       // If the status is "arrivedToUser", also update the bookingStatus to "delivered"
       if (bookStatus === "arrivedToUser") {
-          updateData.BookingStatus = "delivered";
+          updateData.BookingStatus = "ongoing";
           updateData.status = "ongoing";
-          updateData.driverStatus = "ongoing";
+          updateData.driverStatus = "delivered";
       }
 
       const updatedBooking = await BookCar.findByIdAndUpdate(
