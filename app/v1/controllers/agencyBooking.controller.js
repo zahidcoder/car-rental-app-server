@@ -602,20 +602,12 @@ const agencyDashboard = async (req, res, next) => {
 // }
 const agentDeliveried = async (req, res, next) => {
   try {
-    const agencyId = req.user._id; // Agency ID from authenticated request
+    const agencyId = req.user._id;
     const { bookingId } = req.query;
 
-    // Update booking status to "delivered"
-    const deliveryed = await BookCar.findByIdAndUpdate(bookingId, {
-      status: "delivered",
-      BookingStatus: "delivered",
-      isCarReturned: false,
-    }, { new: true })
-      .populate("userId")
-      .populate("agencyId")
-      .populate("carId");
-
-    if (!deliveryed) {
+    // First check if booking exists and hasn't been delivered yet
+    const existingBooking = await BookCar.findById(bookingId);
+    if (!existingBooking) {
       return res.status(404).json({
         status: "error",
         statusCode: 404,
@@ -623,31 +615,69 @@ const agentDeliveried = async (req, res, next) => {
       });
     }
 
-    const { userId, agencyId: bookingAgencyId, carId } = deliveryed;
+    if (existingBooking.status === "delivered") {
+      return res.status(400).json({
+        status: "error",
+        statusCode: 400,
+        message: "Booking is already marked as delivered.",
+      });
+    }
 
-    // Send notification to the user
-    const userNotification = await sendNotification({
-      userId: bookingAgencyId, // Sender (Agency)
-      receiverId: userId, // User receives this notification
+    // Update booking status to "delivered"
+    const deliveryed = await BookCar.findByIdAndUpdate(
       bookingId,
-      title: "How was everything?",
-      body: "It's time to rate your agency.",
-      type: "rating",
-      metadata: { carId: carId._id },
-    });
+      {
+        status: "delivered",
+        BookingStatus: "delivered",
+        isCarReturned: false,
+        reviewNotificationSent: true
+      },
+      { 
+        new: true,
+        runValidators: true
+      }
+    ).populate("userId agencyId carId");
 
-    // Send notification to the agency
-    const agencyNotification = await sendNotification({
-      userId: userId, // Sender (User)
-      receiverId: bookingAgencyId, // Agency receives this notification
-      bookingId,
-      title: "How was everything?",
-      body: "It's time to rate your Client.",
-      type: "userRating",
-      metadata: { carId: carId._id },
-    });
+    if (!deliveryed) {
+      return res.status(404).json({
+        status: "error",
+        statusCode: 404,
+        message: "Failed to update booking status.",
+      });
+    }
 
-    // Return the statistics
+    // Send notifications only if they haven't been sent before
+    if (!existingBooking.reviewNotificationSent) {
+      try {
+        // Send notification to user
+        await sendNotification({
+          userId: deliveryed.agencyId._id,
+          receiverId: deliveryed.userId._id,
+          bookingId,
+          title: "How was everything?",
+          body: "It's time to rate your agency.",
+          type: "rating",
+          metadata: { carId: deliveryed.carId._id },
+        });
+
+        // Send notification to agency
+        await sendNotification({
+          userId: deliveryed.userId._id,
+          receiverId: deliveryed.agencyId._id,
+          bookingId,
+          title: "How was everything?",
+          body: "It's time to rate your Client.",
+          type: "userRating",
+          metadata: { carId: deliveryed.carId._id },
+        });
+
+        console.log(`Notifications sent successfully for booking ${bookingId}`);
+      } catch (notificationError) {
+        console.error('Error sending notifications:', notificationError);
+        // Continue execution even if notifications fail
+      }
+    }
+
     return res.status(200).json({
       status: 'success',
       statusCode: 200,
@@ -655,6 +685,7 @@ const agentDeliveried = async (req, res, next) => {
       data: deliveryed,
     });
   } catch (error) {
+    console.error('Error in agentDeliveried:', error);
     next(error);
   }
 };

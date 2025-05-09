@@ -112,6 +112,10 @@ const bookCarSchema = new mongoose.Schema(
       ],
       default: null,
     },
+    reviewNotificationSent: {
+      type: Boolean,
+      default: false
+    }
   },
   { timestamps: true }
 );
