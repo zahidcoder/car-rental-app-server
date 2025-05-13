@@ -99,15 +99,20 @@ cron.schedule('0 0 * * *', async () => {
     
     try {
         const today = new Date();
+        const formattedDate = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+        console.log(`Current date for comparison: ${formattedDate}`);
         
         // Find unpaid orders where booking start date has passed
         const unpaidOrders = await BookCar.find({
             BookingStatus: { $nin: ['paid', 'cancelled'] },
-            bookingStartDate: { $lte: today.toISOString().split('T')[0] }
+            bookingStartDate: { $lte: formattedDate }
         });
 
+        console.log(`Found ${unpaidOrders.length} unpaid orders to cancel`);
+        
         // Update them to cancelled
         for (const order of unpaidOrders) {
+            console.log(`Cancelling order ${order._id}, start date: ${order.bookingStartDate}`);
             await BookCar.findByIdAndUpdate(order._id, {
                 BookingStatus: 'cancelled',
                 status: 'cancelled'
