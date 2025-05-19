@@ -104,7 +104,7 @@ cron.schedule('0 0 * * *', async () => {
         
         // Find unpaid orders where booking start date has passed
         const unpaidOrders = await BookCar.find({
-            BookingStatus: { $nin: ['paid', 'cancelled'] },
+            BookingStatus: { $in: ['newOrder', 'accept'] },
             bookingStartDate: { $lte: formattedDate }
         });
 
