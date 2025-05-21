@@ -1,5 +1,7 @@
 const cron = require('node-cron');
 const BookCar = require('../app/v1/models/BookCar');
+const Payment = require('../app/v1/models/Payment');
+
 // const User = require('./models/User');
 // const sendNotification = require('./utils/sendNotification'); // Your existing FCM sender
 
@@ -96,30 +98,25 @@ const BookCar = require('../app/v1/models/BookCar');
 // Second cron job - unpaid orders
 cron.schedule('0 0 * * *', async () => {
     console.log('Checking for unpaid orders...');
-    
+
     try {
         const today = new Date();
         const formattedDate = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
         console.log(`Current date for comparison: ${formattedDate}`);
-        
-        // Find unpaid orders where booking start date has passed
-        const unpaidOrders = await BookCar.find({
-            BookingStatus: { $in: ['newOrder', 'accept'] },
-            bookingStartDate: { $lte: formattedDate }
-        });
 
-        console.log(`Found ${unpaidOrders.length} unpaid orders to cancel`);
-        
-        // Update them to cancelled
-        for (const order of unpaidOrders) {
-            console.log(`Cancelling order ${order._id}, start date: ${order.bookingStartDate}`);
-            await BookCar.findByIdAndUpdate(order._id, {
-                BookingStatus: 'cancelled',
-                status: 'cancelled'
-            });
-        }
+        const paidBookingIds = await Payment.distinct('bookingId');
 
-        console.log(`Cancelled ${unpaidOrders.length} unpaid orders`);
+        await BookCar.updateMany(
+            {
+                bookingStartDate: { $lte: formattedDate },
+                _id: { $nin: paidBookingIds }
+            },
+            {
+                $set: { BookingStatus: 'cancelled', status: 'cancelled' }
+            }
+        );
+
+        console.log(`Unpaid orders cancelled if found.`);
     } catch (error) {
         console.error('Error checking unpaid orders:', error);
     }
