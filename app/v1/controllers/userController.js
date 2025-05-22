@@ -13,17 +13,17 @@ const { forgotPasswordService, changePasswordService, userLogin, clearOtpAfterOn
 
 const signUp = async (req, res, next) => {
     try {
-        const { name, email, password, role, agencyId, city } = req.body;
+        const { name, email, password, role, agencyId, fcmToken, city } = req.body;
 
         // Check if fcmToken is missing
-        // if (!fcmToken) {
-        //     return res.status(400).json(Response({
-        //         message: "fcm-token is required",
-        //         status: "Bad Request",
-        //         statusCode: 400,
-        //         type: "Validation"
-        //     }));
-        // }
+        if (!fcmToken) {
+            return res.status(400).json(Response({
+                message: "fcm-token is required",
+                status: "Bad Request",
+                statusCode: 400,
+                type: "Validation"
+            }));
+        }
 
         // Check if the user already exists
         const userExist = await User.findOne({ email: email });
@@ -41,7 +41,7 @@ const signUp = async (req, res, next) => {
 
         // Create a new user instance
         const newUser = new User({
-            name, email, password, oneTimeCode, role, city, agencyId
+            name, email, password, oneTimeCode, role, city, agencyId, fcmToken
         });
 
         // Save the new user to the database
