@@ -122,3 +122,27 @@ cron.schedule('0 0 * * *', async () => {
     }
 });
 
+cron.schedule('5 0 * * *', async () => {
+    console.log('Checking for ongoing bookings to mark as delivered...');
+
+    try {
+        const today = new Date();
+        const formattedDate = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+        console.log(`Current date for comparison: ${formattedDate}`);
+
+        const result = await BookCar.updateMany(
+            {
+                bookingEndDate: { $lte: formattedDate },
+                status: 'ongoing'
+            },
+            {
+                $set: { BookingStatus: 'delivered', status: 'delivered' }
+            }
+        );
+
+        console.log(`Marked ${result.modifiedCount} ongoing bookings as delivered if end date has arrived.`);
+    } catch (error) {
+        console.error('Error marking bookings as delivered:', error);
+    }
+});
+
