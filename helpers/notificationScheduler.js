@@ -123,24 +123,27 @@ cron.schedule('0 0 * * *', async () => {
 });
 
 cron.schedule('5 0 * * *', async () => {
-    console.log('Checking for ongoing bookings to mark as delivered...');
+    console.log('Checking for paid bookings to mark as delivered...');
 
     try {
         const today = new Date();
         const formattedDate = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
         console.log(`Current date for comparison: ${formattedDate}`);
 
+        const paidBookingIds = await Payment.distinct('bookingId');
+
         const result = await BookCar.updateMany(
             {
+                _id: { $in: paidBookingIds },
                 bookingEndDate: { $lte: formattedDate },
-                status: 'ongoing'
+                BookingStatus: { $ne: 'delivered' }
             },
             {
                 $set: { BookingStatus: 'delivered', status: 'delivered' }
             }
         );
 
-        console.log(`Marked ${result.modifiedCount} ongoing bookings as delivered if end date has arrived.`);
+        console.log(`Marked ${result.modifiedCount} paid bookings as delivered if end date has arrived.`);
     } catch (error) {
         console.error('Error marking bookings as delivered:', error);
     }
