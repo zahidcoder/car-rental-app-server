@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const BookCar = require('../app/v1/models/BookCar');
 const Payment = require('../app/v1/models/Payment');
+const { sendNotification } = require('../config/push-notifaction');
 
 // const User = require('./models/User');
 // const sendNotification = require('./utils/sendNotification'); // Your existing FCM sender
@@ -132,6 +133,14 @@ cron.schedule('5 0 * * *', async () => {
 
         const paidBookingIds = await Payment.distinct('bookingId');
 
+        // Find bookings to be marked as delivered
+        const bookingsToDeliver = await BookCar.find({
+            _id: { $in: paidBookingIds },
+            bookingEndDate: { $lte: formattedDate },
+            BookingStatus: { $ne: 'delivered' }
+        }).populate('userId agencyId carId');
+
+        // Mark as delivered
         const result = await BookCar.updateMany(
             {
                 _id: { $in: paidBookingIds },
@@ -142,6 +151,30 @@ cron.schedule('5 0 * * *', async () => {
                 $set: { BookingStatus: 'delivered', status: 'delivered' }
             }
         );
+
+        // Send notification to user and agency for each delivered booking
+        for (const booking of bookingsToDeliver) {
+            await sendNotification({
+                userId: booking.agencyId._id || booking.agencyId,
+                receiverId: booking.userId._id || booking.userId,
+                bookingId: booking._id,
+                title: "How was everything?",
+                body: "It's time to rate your agency.",
+                type: "rating",
+                metadata: { carId: booking.carId._id || booking.carId }
+            });
+
+            // Send notification to agency
+            await sendNotification({
+                userId: booking.userId._id || booking.userId,
+                receiverId: booking.agencyId._id || booking.agencyId,
+                bookingId: booking._id,
+                title: "How was everything?",
+                body: "It's time to rate your Client.",
+                type: "userRating",
+                metadata: { carId: booking.carId._id || booking.carId }
+            });
+        }
 
         console.log(`Marked ${result.modifiedCount} paid bookings as delivered if end date has arrived.`);
     } catch (error) {
