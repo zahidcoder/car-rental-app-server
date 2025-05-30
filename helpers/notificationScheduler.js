@@ -123,7 +123,7 @@ cron.schedule('0 0 * * *', async () => {
     }
 });
 
-cron.schedule('5 0 * * *', async () => {
+cron.schedule('5 10 * * *', async () => {
     console.log('Checking for paid bookings to mark as delivered...');
 
     try {
