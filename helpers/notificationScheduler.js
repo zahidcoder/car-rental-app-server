@@ -117,7 +117,19 @@ cron.schedule('0 0 * * *', async () => {
             }
         );
 
-        console.log(`Unpaid orders cancelled if found.`);
+        // Mark paid bookings as ongoing on start date
+        await BookCar.updateMany(
+            {
+                bookingStartDate: { $lte: formattedDate },
+                _id: { $in: paidBookingIds },
+                BookingStatus: { $ne: 'ongoing' }
+            },
+            {
+                $set: { BookingStatus: 'ongoing', status: 'ongoing' }
+            }
+        );
+
+        console.log(`Unpaid orders cancelled and paid bookings marked as ongoing if applicable.`);
     } catch (error) {
         console.error('Error checking unpaid orders:', error);
     }
