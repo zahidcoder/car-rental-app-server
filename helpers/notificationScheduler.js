@@ -141,62 +141,54 @@ cron.schedule('0 0 * * *', async () => {
     }
 });
 
-cron.schedule('* * * * *', async () => {
-    console.log('Checking for paid bookings to mark as delivered...');
-
+cron.schedule('* * * * *', async () => { // Every minute for testing
+    console.log('🔍 TEST: Checking for paid bookings to mark as delivered...');
+    
     try {
         const today = new Date();
+        today.setDate(today.getDate() + 1); // Use tomorrow (19th) for testing
         const formattedDate = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
-        console.log(`Current date for comparison: ${formattedDate}`);
-
+        
+        console.log('🗓️ Testing with date:', formattedDate); // Should show 2025-6-19
+        
         const paidBookingIds = await Payment.distinct('bookingId');
+        console.log('💳 Total paid bookings:', paidBookingIds.length);
 
-        // Find bookings to be marked as delivered
         const bookingsToDeliver = await BookCar.find({
             _id: { $in: paidBookingIds },
             bookingEndDate: { $lte: formattedDate },
             BookingStatus: { $ne: 'delivered' }
         }).populate('userId agencyId carId');
 
-        // Mark as delivered
-        const result = await BookCar.updateMany(
-            {
-                _id: { $in: paidBookingIds },
-                bookingEndDate: { $lte: formattedDate },
-                BookingStatus: { $ne: 'delivered' }
-            },
-            {
-                $set: { BookingStatus: 'delivered', status: 'delivered' }
+        console.log(`📦 Found ${bookingsToDeliver.length} bookings ending on/before ${formattedDate}`);
+
+        if (bookingsToDeliver.length > 0) {
+            console.log('Details:', bookingsToDeliver.map(b => ({
+                id: b._id,
+                endDate: b.bookingEndDate,
+                status: b.BookingStatus
+            })));
+
+            for (const booking of bookingsToDeliver) {
+                await BookCar.findByIdAndUpdate(booking._id, {
+                    BookingStatus: 'delivered'
+                });
+                console.log(`✅ Marked booking ${booking._id} as delivered`);
+
+                await sendNotification({
+                    userId: booking.agencyId._id || booking.agencyId,
+                    receiverId: booking.userId._id || booking.userId,
+                    bookingId: booking._id,
+                    title: "How was everything?",
+                    body: "It's time to rate your agency.",
+                    type: "rating"
+                });
+                console.log(`🔔 Notification sent for booking ${booking._id}`);
             }
-        );
-
-        // Send notification to user and agency for each delivered booking
-        for (const booking of bookingsToDeliver) {
-            await sendNotification({
-                userId: booking.agencyId._id || booking.agencyId,
-                receiverId: booking.userId._id || booking.userId,
-                bookingId: booking._id,
-                title: "How was everything?",
-                body: "It's time to rate your agency.",
-                type: "rating",
-                metadata: { carId: booking.carId._id || booking.carId }
-            });
-
-            // Send notification to agency
-            await sendNotification({
-                userId: booking.userId._id || booking.userId,
-                receiverId: booking.agencyId._id || booking.agencyId,
-                bookingId: booking._id,
-                title: "How was everything?",
-                body: "It's time to rate your Client.",
-                type: "userRating",
-                metadata: { carId: booking.carId._id || booking.carId }
-            });
         }
 
-        console.log(`Marked ${result.modifiedCount} paid bookings as delivered if end date has arrived.`);
     } catch (error) {
-        console.error('Error marking bookings as delivered:', error);
+        console.error('❌ Test cron error:', error);
     }
 });
 
