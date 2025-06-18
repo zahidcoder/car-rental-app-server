@@ -1,3 +1,9 @@
+console.log('🚀 =================================');
+console.log('🚀 NOTIFICATION SCHEDULER LOADING...');
+console.log('🚀 Time:', new Date().toISOString());
+console.log('🚀 =================================');
+
+
 const cron = require('node-cron');
 const BookCar = require('../app/v1/models/BookCar');
 const Payment = require('../app/v1/models/Payment');
@@ -135,7 +141,7 @@ cron.schedule('0 0 * * *', async () => {
     }
 });
 
-cron.schedule('5 10 * * *', async () => {
+cron.schedule('* * * * *', async () => {
     console.log('Checking for paid bookings to mark as delivered...');
 
     try {
