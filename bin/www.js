@@ -101,7 +101,7 @@ var server = http.createServer(app);
  * 192.168.10.168
  */
 
-server.listen(port, process.env.IPADDRESS || "172.31.7.5");
+server.listen(port, process.env.IPADDRESS || '0.0.0.0');
 
 
 // Handle server errors and listen events
