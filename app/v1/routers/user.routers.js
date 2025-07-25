@@ -1,6 +1,6 @@
 
 const express = require('express');
-const { signUp, verifyCode, resendOtp, signIn, forgotPassword, cahngePassword, changePasswordUseingOldPassword, userInformation, updatedUserProfile, agencyCollection, updatedDriverLicence, userInformationById, driverInformationById } = require('../controllers/userController');
+const { signUp, verifyCode, resendOtp, signIn, forgotPassword, cahngePassword, changePasswordUseingOldPassword, userInformation, updatedUserProfile, agencyCollection, updatedDriverLicence, userInformationById, driverInformationById, deleteUser } = require('../controllers/userController');
 const upload = require('../../../middlewares/fileuplode');
 const authenticateUser = require('../../../middlewares/auth');
 const { showUserWithDrivingLicence, makeuserVerified, getverifyedUsers } = require('../controllers/admin/user.controllers');
@@ -28,5 +28,5 @@ router.get('/showAlluserLicenceForAproved',authenticateUser,showUserWithDrivingL
 router.patch('/verify',authenticateUser,makeuserVerified)
 
 router.get('/getverifyedUsers',getverifyedUsers)
-
+router.delete('/deleteUser', authenticateUser, deleteUser);
 module.exports=router

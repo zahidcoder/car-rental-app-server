@@ -570,6 +570,28 @@ if (driverLicense && Array.isArray(driverLicense)) {
     }
 }
 
+
+const deleteUser = async (req, res, next) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findByIdAndDelete(userId);
+        if (!user) {
+            return res.status(404).json(Response({
+                message: "User not found",
+                statusCode: 404,
+                status: "Failed"
+            }));
+        }
+        res.status(200).json(Response({
+            message: "User deleted successfully",
+            statusCode: 200,
+            status: "Success"
+        }));
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = { 
     signUp,
      verifyCode,
@@ -586,6 +608,6 @@ module.exports = {
      agencyCollection,
      updatedDriverLicence,
      userInformationById,
-     driverInformationById
-  
+     driverInformationById,
+     deleteUser
     };
